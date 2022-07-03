@@ -27,16 +27,16 @@ extension ExponentialInsulinModelPreset {
         case .lyumjev:
             return .minutes(360)
         case .afrezza:
-            return .minutes(300)
+            return .minutes(90)
         }
     }
 
     public var peakActivity: TimeInterval {
         switch self {
         case .rapidActingAdult:
-            return .minutes(75)
+            return .minutes(85)
         case .rapidActingChild:
-            return .minutes(65)
+            return .minutes(75)
         case .fiasp:
             return .minutes(55)
         case .lyumjev:
