@@ -72,14 +72,17 @@ public actor LoopAlgorithm {
 
     // Generates a forecast predicting glucose.
     public static func generatePrediction(input: LoopPredictionInput, startDate: Date? = nil) throws -> LoopPrediction {
+        return try generatePrediction(input: input, startDate: startDate, insulinModelProvider: PresetInsulinModelProvider(defaultRapidActingModel: nil))
+    }
+
+    /// Lets tests pin the insulin model their fixtures were generated with. (custom)
+    public static func generatePrediction(input: LoopPredictionInput, startDate: Date? = nil, insulinModelProvider: InsulinModelProvider) throws -> LoopPrediction {
 
         guard let latestGlucose = input.glucoseHistory.last else {
             throw AlgorithmError.missingGlucose
         }
 
         let start = startDate ?? latestGlucose.startDate
-
-        let insulinModelProvider = PresetInsulinModelProvider(defaultRapidActingModel: nil)
 
         let settings = input.settings
 

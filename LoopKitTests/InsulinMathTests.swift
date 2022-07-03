@@ -39,8 +39,10 @@ class InsulinMathTests: XCTestCase {
     
     private let exponentialModel = ExponentialInsulinModel(actionDuration: TimeInterval(minutes: 360), peakActivityTime: TimeInterval(minutes: 75))
     
-    let insulinModelSettings = StaticInsulinModelProvider(ExponentialInsulinModelPreset.rapidActingAdult)
-    let insulinModelDuration = ExponentialInsulinModelPreset.rapidActingAdult.effectDuration
+    // Upstream's rapidActingAdult; the fixtures assume it (custom)
+    private static let upstreamAdultModel = ExponentialInsulinModel(actionDuration: TimeInterval(minutes: 360), peakActivityTime: TimeInterval(minutes: 75))
+    let insulinModelSettings = StaticInsulinModelProvider(InsulinMathTests.upstreamAdultModel)
+    let insulinModelDuration = InsulinMathTests.upstreamAdultModel.effectDuration
     
     let walshModelSettings = StaticInsulinModelProvider( WalshInsulinModel(actionDuration: TimeInterval(hours: 4)))
     let walshModelDuration = WalshInsulinModel(actionDuration: TimeInterval(hours: 4)).effectDuration
