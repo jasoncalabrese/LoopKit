@@ -75,4 +75,18 @@ public enum InsulinType: Int, Codable, CaseIterable {
             return true
         }
     }
+
+    /// Glucose-lowering effect per logged unit, relative to rapid-acting injected insulin. (custom)
+    ///
+    /// Lets a dose be recorded as what was actually taken (a 4U Afrezza cartridge) while
+    /// insulin on board and glucose effects count its injected equivalent (2U).
+    /// The insulin model only shapes the curve over time; this sets how much it adds up to.
+    public var potencyFactor: Double {
+        switch self {
+        case .afrezza:
+            return 0.5
+        default:
+            return 1
+        }
+    }
 }

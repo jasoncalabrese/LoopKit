@@ -92,7 +92,8 @@ extension DoseEntry {
     public var netBasalUnits: Double {
         switch type {
         case .bolus:
-            return deliveredUnits ?? programmedUnits
+            // Scaled by insulin type: 1 for everything except inhaled Afrezza. (custom)
+            return (deliveredUnits ?? programmedUnits) * (insulinType?.potencyFactor ?? 1)
         case .basal:
             return 0
         case .resume, .suspend, .tempBasal:

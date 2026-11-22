@@ -118,3 +118,46 @@ class DoseEntryRawRepresentableTests: XCTestCase {
         XCTAssertEqual(actual, original)
     }
 }
+
+// MARK: - Insulin type potency (custom)
+
+class DoseEntryPotencyTests: XCTestCase {
+    func testPotencyFactorIsOneExceptAfrezza() {
+        for type in InsulinType.allCases where type != .afrezza {
+            XCTAssertEqual(type.potencyFactor, 1, "\(type) must not be scaled")
+        }
+        XCTAssertEqual(InsulinType.afrezza.potencyFactor, 0.5)
+    }
+
+    func testBolusWithoutInsulinTypeIsUnscaled() {
+        let dose = DoseEntry(type: .bolus, startDate: Date(), value: 4, unit: .units)
+        XCTAssertEqual(dose.netBasalUnits, 4)
+    }
+
+    func testRapidActingBolusIsUnscaled() {
+        let dose = DoseEntry(type: .bolus, startDate: Date(), value: 4, unit: .units, insulinType: .novolog)
+        XCTAssertEqual(dose.netBasalUnits, 4)
+    }
+
+    func testDeliveredUnitsStillWinForUnscaledTypes() {
+        let dose = DoseEntry(type: .bolus, startDate: Date(), value: 4, unit: .units, deliveredUnits: 3.2, insulinType: .humalog)
+        XCTAssertEqual(dose.netBasalUnits, 3.2)
+    }
+
+    func testAfrezzaCartridgeRecordedAsFourCountsAsTwo() {
+        let dose = DoseEntry(type: .bolus, startDate: Date(), value: 4, unit: .units, insulinType: .afrezza, manuallyEntered: true)
+        XCTAssertEqual(dose.programmedUnits, 4, "recorded as the cartridge size")
+        XCTAssertEqual(dose.unitsInDeliverableIncrements, 4, "stored as the cartridge size")
+        XCTAssertEqual(dose.netBasalUnits, 2, "counted as the injected equivalent")
+    }
+
+    func testAfrezzaInsulinOnBoardAndEffectUseScaledUnits() {
+        let start = Date()
+        let dose = DoseEntry(type: .bolus, startDate: start, value: 4, unit: .units, insulinType: .afrezza, manuallyEntered: true)
+        let model = ExponentialInsulinModelPreset.afrezza
+
+        XCTAssertEqual(dose.insulinOnBoard(at: start, model: model, delta: .minutes(5)), 2, accuracy: 0.0001)
+        let fullEffect = dose.glucoseEffect(at: start.addingTimeInterval(model.effectDuration), model: model, insulinSensitivity: 50, delta: .minutes(5))
+        XCTAssertEqual(fullEffect, -100, accuracy: 0.0001, "4U Afrezza at ISF 50 lowers like 2U: -100 mg/dL")
+    }
+}
