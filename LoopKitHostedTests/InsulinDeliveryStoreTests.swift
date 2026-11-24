@@ -11,30 +11,32 @@ import HealthKit
 @testable import LoopKit
 
 class InsulinDeliveryStoreTestsBase: PersistenceControllerTestCase {
-    internal let entry1 = DoseEntry(type: .basal,
-                                    startDate: Date(timeIntervalSinceNow: -.minutes(6)),
-                                    endDate: Date(timeIntervalSinceNow: -.minutes(5.5)),
-                                    value: 1.8,
-                                    unit: .unitsPerHour,
-                                    deliveredUnits: 0.015,
-                                    syncIdentifier: "4B14522E-A7B5-4E73-B76B-5043CD7176B0",
-                                    scheduledBasalRate: nil)
-    internal let entry2 = DoseEntry(type: .tempBasal,
-                                    startDate: Date(timeIntervalSinceNow: -.minutes(2)),
-                                    endDate: Date(timeIntervalSinceNow: -.minutes(1.5)),
-                                    value: 2.4,
-                                    unit: .unitsPerHour,
-                                    deliveredUnits: 0.02,
-                                    syncIdentifier: "A1F8E29B-33D6-4B38-B4CD-D84F14744871",
-                                    scheduledBasalRate: HKQuantity(unit: .internationalUnitsPerHour, doubleValue: 1.8))
-    internal let entry3 = DoseEntry(type: .bolus,
-                                    startDate: Date(timeIntervalSinceNow: -.minutes(4)),
-                                    endDate: Date(timeIntervalSinceNow: -.minutes(3.5)),
-                                    value: 1.0,
-                                    unit: .units,
-                                    deliveredUnits: nil,
-                                    syncIdentifier: "1A1D6192-1521-4469-B962-1B82C4534BB1",
-                                    scheduledBasalRate: nil)
+    // Lazy so the dates are relative to when a test uses them, not when XCTest creates every
+    // test case instance at suite start; otherwise the narrow window in testGetDoseEntries misses. (custom)
+    internal lazy var entry1 = DoseEntry(type: .basal,
+                                         startDate: Date(timeIntervalSinceNow: -.minutes(6)),
+                                         endDate: Date(timeIntervalSinceNow: -.minutes(5.5)),
+                                         value: 1.8,
+                                         unit: .unitsPerHour,
+                                         deliveredUnits: 0.015,
+                                         syncIdentifier: "4B14522E-A7B5-4E73-B76B-5043CD7176B0",
+                                         scheduledBasalRate: nil)
+    internal lazy var entry2 = DoseEntry(type: .tempBasal,
+                                         startDate: Date(timeIntervalSinceNow: -.minutes(2)),
+                                         endDate: Date(timeIntervalSinceNow: -.minutes(1.5)),
+                                         value: 2.4,
+                                         unit: .unitsPerHour,
+                                         deliveredUnits: 0.02,
+                                         syncIdentifier: "A1F8E29B-33D6-4B38-B4CD-D84F14744871",
+                                         scheduledBasalRate: HKQuantity(unit: .internationalUnitsPerHour, doubleValue: 1.8))
+    internal lazy var entry3 = DoseEntry(type: .bolus,
+                                         startDate: Date(timeIntervalSinceNow: -.minutes(4)),
+                                         endDate: Date(timeIntervalSinceNow: -.minutes(3.5)),
+                                         value: 1.0,
+                                         unit: .units,
+                                         deliveredUnits: nil,
+                                         syncIdentifier: "1A1D6192-1521-4469-B962-1B82C4534BB1",
+                                         scheduledBasalRate: nil)
     internal let device = HKDevice(name: UUID().uuidString,
                                    manufacturer: UUID().uuidString,
                                    model: UUID().uuidString,
