@@ -1092,6 +1092,14 @@ extension DoseStore {
         ).compactMap({ $0.dose })
         let normalizedDoses = doses.reconciled()
 
+        // An open suspend's endDate equals its startDate until it is resumed. Keep it once it started
+        // before the window, so delivery that is still stopped keeps counting toward IOB. (custom)
+        if let lastBasal = normalizedDoses.last(where: { $0.type != .bolus }),
+           lastBasal.type == .suspend, lastBasal.endDate <= lastBasal.startDate, lastBasal.startDate < start
+        {
+            return [lastBasal] + normalizedDoses.filterDateRange(start, end)
+        }
+
         return normalizedDoses.filterDateRange(start, end)
     }
 
@@ -1273,6 +1281,41 @@ extension DoseStore {
     ///   - returns: A list of DoseEntry objects representing the basal doses that match the query parameters
     public func getDoses(start: Date? = nil, end: Date? = nil) async throws -> [DoseEntry] {
         return try await insulinDeliveryStore.getDoses(start: start, end: end)
+    }
+
+    /// The start date of a suspend that has no matching resume, if the pump's most recent
+    /// basal event is one. (custom)
+    ///
+    /// Pump managers record a suspend when delivery stops, including when a pod faults or is
+    /// discarded with no replacement. While it is open, delivery is known to be zero even though
+    /// no new pump data arrives.
+    ///
+    /// - Parameters:
+    ///   - lookback: How far back to search for the suspend
+    ///   - completion: Called with the suspend's start date, or nil if delivery is not known stopped
+    public func getOpenSuspendStartDate(lookback: TimeInterval = 24 * 60 * 60, completion: @escaping (_ startDate: Date?) -> Void) {
+        persistenceController.managedObjectContext.perform {
+            do {
+                let start = self.currentDate().addingTimeInterval(-lookback)
+                let basalTypes: Set<DoseType> = [.basal, .tempBasal, .suspend, .resume]
+                let doses = try self.getPumpEventObjects(
+                    matching: NSPredicate(format: "date >= %@ && doseType != nil", start as NSDate),
+                    chronological: true
+                ).compactMap({ $0.dose }).filter({ basalTypes.contains($0.type) })
+
+                guard let last = doses.reconciled().last,
+                      last.type == .suspend,
+                      last.endDate <= last.startDate
+                else {
+                    completion(nil)
+                    return
+                }
+                completion(last.startDate)
+            } catch let error {
+                self.log.error("Error fetching pump events for open suspend: %{public}@", String(describing: error))
+                completion(nil)
+            }
+        }
     }
 
 

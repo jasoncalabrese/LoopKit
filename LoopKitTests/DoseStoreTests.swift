@@ -165,6 +165,69 @@ class DoseStoreTests: PersistenceControllerTestCase {
     }
 
     
+    // MARK: - Open suspend (pod failed, no replacement)
+
+    private func addPumpEvents(_ events: [NewPumpEvent], to doseStore: DoseStore, lastReconciliation: Date) {
+        let added = expectation(description: "addPumpEvents")
+        doseStore.addPumpEvents(events, lastReconciliation: lastReconciliation) { error in
+            XCTAssertNil(error)
+            added.fulfill()
+        }
+        waitForExpectations(timeout: 30)
+    }
+
+    private func openSuspendStartDate(_ doseStore: DoseStore) -> Date? {
+        let queried = expectation(description: "getOpenSuspendStartDate")
+        var startDate: Date?
+        doseStore.getOpenSuspendStartDate { date in
+            startDate = date
+            queried.fulfill()
+        }
+        waitForExpectations(timeout: 30)
+        return startDate
+    }
+
+    func testOpenSuspendStartDate() {
+        let now = testingDate("2026-11-23 20:00:00 +0000")
+        let doseStore = defaultStore(testingDate: now)
+        let suspendDate = now.addingTimeInterval(.hours(-2))
+
+        XCTAssertNil(openSuspendStartDate(doseStore))
+
+        let suspend = NewPumpEvent(date: suspendDate, dose: DoseEntry(suspendDate: suspendDate), raw: Data(hexadecimalString: "10")!, title: "Suspend", type: .suspend)
+        addPumpEvents([suspend], to: doseStore, lastReconciliation: suspendDate)
+        XCTAssertEqual(openSuspendStartDate(doseStore), suspendDate)
+
+        let resumeDate = now.addingTimeInterval(.hours(-1))
+        let resume = NewPumpEvent(date: resumeDate, dose: DoseEntry(resumeDate: resumeDate), raw: Data(hexadecimalString: "11")!, title: "Resume", type: .resume)
+        addPumpEvents([resume], to: doseStore, lastReconciliation: resumeDate)
+        XCTAssertNil(openSuspendStartDate(doseStore))
+    }
+
+    func testOpenSuspendOlderThanEffectDurationStillCountsInIOB() {
+        // The store's longest effect duration is 4h; this suspend started 8h ago and was never resumed.
+        let now = testingDate("2026-11-23 20:00:00 +0000")
+        let doseStore = defaultStore(testingDate: now)
+        let suspendDate = now.addingTimeInterval(.hours(-8))
+
+        let suspend = NewPumpEvent(date: suspendDate, dose: DoseEntry(suspendDate: suspendDate), raw: Data(hexadecimalString: "10")!, title: "Suspend", type: .suspend)
+        addPumpEvents([suspend], to: doseStore, lastReconciliation: suspendDate)
+
+        let queried = expectation(description: "insulinOnBoard")
+        doseStore.insulinOnBoard(at: now) { result in
+            switch result {
+            case .failure(let error):
+                XCTFail("Unexpected error: \(error)")
+            case .success(let value):
+                // About 4h of missed 0.8–0.85 U/hr basal still active, so clearly negative, not 0
+                XCTAssertLessThan(value.value, -1.0)
+                XCTAssertGreaterThan(value.value, -3.5)
+            }
+            queried.fulfill()
+        }
+        waitForExpectations(timeout: 30)
+    }
+
     func testPumpEventTypeDoseMigration() {
         cacheStore.managedObjectContext.performAndWait {
             let event = PumpEvent(entity: PumpEvent.entity(), insertInto: cacheStore.managedObjectContext)
