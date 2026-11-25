@@ -89,9 +89,7 @@ public struct TherapySettingsView: View {
         cards.append(carbRatioSection)
         cards.append(basalRatesSection)
         cards.append(deliveryLimitsSection)
-        if viewModel.adultChildInsulinModelSelectionEnabled {
-            cards.append(insulinModelSection)
-        }
+        cards.append(insulinModelSection)  // always: it also holds the Afrezza potency factor (custom)
         cards.append(insulinSensitivitiesSection)
 
         return CardStack(cards: cards)
@@ -325,7 +323,7 @@ extension TherapySettingsView {
         
     private var insulinModelSection: Card {
         card(for: .insulinModel) {
-            if let insulinModelPreset = self.viewModel.therapySettings.defaultRapidActingModel {
+            if viewModel.adultChildInsulinModelSelectionEnabled, let insulinModelPreset = self.viewModel.therapySettings.defaultRapidActingModel {
                 SectionDivider()
                 HStack {
                     // Spacing and paddings here is my best guess based on the design...
@@ -339,6 +337,7 @@ extension TherapySettingsView {
                             .foregroundColor(.secondary)
                             .padding(.bottom, 8)
                             .fixedSize(horizontal: false, vertical: true)
+                        afrezzaPotencySummary  // (custom)
                     }
                     Spacer()
                     Image(systemName: "checkmark")
@@ -346,8 +345,24 @@ extension TherapySettingsView {
                         .foregroundColor(.accentColor)
                 }
                 .accessibilityElement(children: .combine)
+            } else if !viewModel.adultChildInsulinModelSelectionEnabled {  // (custom) only the Afrezza factor
+                SectionDivider()
+                HStack {
+                    afrezzaPotencySummary
+                        .padding(.top, 5)
+                    Spacer()
+                }
+                .accessibilityElement(children: .combine)
             }
         }
+    }
+
+    private var afrezzaPotencySummary: some View {  // (custom)
+        Text(String(format: LocalizedString("Afrezza 4U counts as %@U", comment: "Afrezza potency summary (1: counted units)"),
+                    (4 * (viewModel.therapySettings.afrezzaPotencyFactor ?? InsulinType.defaultAfrezzaPotencyFactor)).formatted()))
+            .font(.footnote)
+            .foregroundColor(.secondary)
+            .padding(.bottom, 8)
     }
 
     private var carbRatioSection: Card {

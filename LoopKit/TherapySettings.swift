@@ -30,6 +30,9 @@ public struct TherapySettings: Equatable {
     
     public var defaultRapidActingModel: ExponentialInsulinModelPreset?
 
+    /// Afrezza potency factor; nil means the default (custom)
+    public var afrezzaPotencyFactor: Double?
+
     public var isComplete: Bool {
         return
             glucoseTargetRangeSchedule != nil &&
@@ -53,7 +56,8 @@ public struct TherapySettings: Equatable {
         insulinSensitivitySchedule: InsulinSensitivitySchedule? = nil,
         carbRatioSchedule: CarbRatioSchedule? = nil,
         basalRateSchedule: BasalRateSchedule? = nil,
-        defaultRapidActingModel: ExponentialInsulinModelPreset? = nil
+        defaultRapidActingModel: ExponentialInsulinModelPreset? = nil,
+        afrezzaPotencyFactor: Double? = nil
     ){
         self.glucoseTargetRangeSchedule = glucoseTargetRangeSchedule
         self.correctionRangeOverrides = correctionRangeOverrides
@@ -65,6 +69,7 @@ public struct TherapySettings: Equatable {
         self.carbRatioSchedule = carbRatioSchedule
         self.basalRateSchedule = basalRateSchedule
         self.defaultRapidActingModel = defaultRapidActingModel
+        self.afrezzaPotencyFactor = afrezzaPotencyFactor
     }
 }
 
@@ -81,6 +86,7 @@ extension TherapySettings: Codable {
         let carbRatioSchedule = try container.decodeIfPresent(CarbRatioSchedule.self, forKey: .carbRatioSchedule)
         let basalRateSchedule = try container.decodeIfPresent(BasalRateSchedule.self, forKey: .basalRateSchedule)
         let defaultRapidActingModel = try container.decodeIfPresent(ExponentialInsulinModelPreset.self, forKey: .defaultRapidActingModel)
+        let afrezzaPotencyFactor = try container.decodeIfPresent(Double.self, forKey: .afrezzaPotencyFactor)
 
         self.init(glucoseTargetRangeSchedule: glucoseTargetRangeSchedule,
                   correctionRangeOverrides: correctionRangeOverrides,
@@ -90,7 +96,8 @@ extension TherapySettings: Codable {
                   insulinSensitivitySchedule: insulinSensitivitySchedule,
                   carbRatioSchedule: carbRatioSchedule,
                   basalRateSchedule: basalRateSchedule,
-                  defaultRapidActingModel: defaultRapidActingModel)
+                  defaultRapidActingModel: defaultRapidActingModel,
+                  afrezzaPotencyFactor: afrezzaPotencyFactor)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -104,6 +111,7 @@ extension TherapySettings: Codable {
         try container.encodeIfPresent(carbRatioSchedule, forKey: .carbRatioSchedule)
         try container.encodeIfPresent(basalRateSchedule, forKey: .basalRateSchedule)
         try container.encodeIfPresent(defaultRapidActingModel, forKey: .defaultRapidActingModel)
+        try container.encodeIfPresent(afrezzaPotencyFactor, forKey: .afrezzaPotencyFactor)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -116,6 +124,7 @@ extension TherapySettings: Codable {
         case carbRatioSchedule
         case basalRateSchedule
         case defaultRapidActingModel
+        case afrezzaPotencyFactor
     }
 }
 

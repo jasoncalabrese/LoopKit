@@ -329,3 +329,25 @@ fileprivate extension TherapySettings {
         )
     }
 }
+
+// MARK: - Afrezza potency factor (custom)
+
+class TherapySettingsAfrezzaPotencyTests: XCTestCase {
+    func testAfrezzaPotencyFactorRoundTrips() throws {
+        let settings = TherapySettings(maximumBolus: 10, afrezzaPotencyFactor: 0.2)
+        let decoded = try JSONDecoder().decode(TherapySettings.self, from: JSONEncoder().encode(settings))
+        XCTAssertEqual(decoded.afrezzaPotencyFactor, 0.2)
+        XCTAssertEqual(decoded, settings)
+    }
+
+    func testMissingAfrezzaPotencyFactorDecodesAsNil() throws {
+        let decoded = try JSONDecoder().decode(TherapySettings.self, from: JSONEncoder().encode(TherapySettings(maximumBolus: 10)))
+        XCTAssertNil(decoded.afrezzaPotencyFactor)
+    }
+
+    func testStoredSettingsCarriesAfrezzaPotencyFactor() throws {
+        let stored = StoredSettings(afrezzaPotencyFactor: 0.35, bloodGlucoseUnit: .milligramsPerDeciliter)
+        let decoded = try JSONDecoder().decode(StoredSettings.self, from: JSONEncoder().encode(stored))
+        XCTAssertEqual(decoded.afrezzaPotencyFactor, 0.35)
+    }
+}

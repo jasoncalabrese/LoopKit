@@ -3191,6 +3191,9 @@
         }
       }
     },
+    "%1$@U counts as %2$@U" : {
+      "comment" : "Afrezza potency: units logged and units counted (1: cartridge units, 2: counted units)"
+    },
     "%1$d percent complete." : {
       "comment" : "Format string for progress accessibility label (1: duration in seconds)",
       "localizations" : {
@@ -5511,6 +5514,12 @@
           }
         }
       }
+    },
+    "Afrezza (inhaled insulin)" : {
+      "comment" : "Title for the Afrezza potency setting"
+    },
+    "Afrezza 4U counts as %@U" : {
+      "comment" : "Afrezza potency summary (1: counted units)"
     },
     "Are you sure you want to delete all history entries?" : {
       "comment" : "Action sheet confirmation message for pump history deletion",
@@ -13364,6 +13373,9 @@
         }
       }
     },
+    "Factor %@" : {
+      "comment" : "Afrezza potency factor value (1: factor)"
+    },
     "Fast" : {
       "comment" : "Section title for fast absorbing food",
       "localizations" : {
@@ -15806,6 +15818,9 @@
           }
         }
       }
+    },
+    "How much of each logged Afrezza unit counts as injected insulin, for active insulin and the forecast. History and Nightscout keep the units actually taken." : {
+      "comment" : "Description of the Afrezza potency setting"
     },
     "If these settings look good to you, tap Save Settings to continue." : {
       "comment" : "Description of how to interact with summary screen",

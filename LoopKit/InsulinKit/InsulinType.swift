@@ -79,14 +79,25 @@ public enum InsulinType: Int, Codable, CaseIterable {
     /// Glucose-lowering effect per logged unit, relative to rapid-acting injected insulin. (custom)
     ///
     /// Lets a dose be recorded as what was actually taken (a 4U Afrezza cartridge) while
-    /// insulin on board and glucose effects count its injected equivalent (2U).
+    /// insulin on board and glucose effects count its injected equivalent.
     /// The insulin model only shapes the curve over time; this sets how much it adds up to.
     public var potencyFactor: Double {
         switch self {
         case .afrezza:
-            return 0.5
+            return InsulinType.afrezzaPotencyFactor
         default:
             return 1
         }
     }
+
+    /// Default and allowed range for the user-set Afrezza potency factor (custom)
+    public static let defaultAfrezzaPotencyFactor = 0.5
+    public static let afrezzaPotencyFactorRange: ClosedRange<Double> = 0...1
+
+    /// The Afrezza potency factor in effect, app-wide. Set from therapy settings; clamped to the range. (custom)
+    public static var afrezzaPotencyFactor: Double {
+        get { lockedAfrezzaPotencyFactor.value }
+        set { lockedAfrezzaPotencyFactor.value = min(max(newValue, afrezzaPotencyFactorRange.lowerBound), afrezzaPotencyFactorRange.upperBound) }
+    }
+    private static let lockedAfrezzaPotencyFactor = Locked(defaultAfrezzaPotencyFactor)
 }

@@ -122,6 +122,27 @@ class DoseEntryRawRepresentableTests: XCTestCase {
 // MARK: - Insulin type potency (custom)
 
 class DoseEntryPotencyTests: XCTestCase {
+    override func tearDown() {
+        InsulinType.afrezzaPotencyFactor = InsulinType.defaultAfrezzaPotencyFactor
+        super.tearDown()
+    }
+
+    func testAfrezzaPotencyFactorIsSettable() {
+        InsulinType.afrezzaPotencyFactor = 0.2
+        XCTAssertEqual(InsulinType.afrezza.potencyFactor, 0.2)
+        XCTAssertEqual(InsulinType.novolog.potencyFactor, 1)
+        let dose = DoseEntry(type: .bolus, startDate: Date(), value: 4, unit: .units, insulinType: .afrezza, manuallyEntered: true)
+        XCTAssertEqual(dose.netBasalUnits, 0.8, accuracy: 0.0001)
+        XCTAssertEqual(dose.programmedUnits, 4, "still recorded as the cartridge size")
+    }
+
+    func testAfrezzaPotencyFactorIsClampedToRange() {
+        InsulinType.afrezzaPotencyFactor = 1.5
+        XCTAssertEqual(InsulinType.afrezzaPotencyFactor, 1)
+        InsulinType.afrezzaPotencyFactor = -0.1
+        XCTAssertEqual(InsulinType.afrezzaPotencyFactor, 0)
+    }
+
     func testPotencyFactorIsOneExceptAfrezza() {
         for type in InsulinType.allCases where type != .afrezza {
             XCTAssertEqual(type.potencyFactor, 1, "\(type) must not be scaled")

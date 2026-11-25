@@ -184,6 +184,15 @@ extension TherapySettingsViewModel {
         therapySettings.defaultRapidActingModel = insulinModelPreset
         delegate?.saveCompletion(therapySettings: therapySettings)
     }
+
+    /// Saves the insulin model (when selectable) and the Afrezza potency factor together, as one settings change (custom)
+    public func saveInsulinModel(insulinModelPreset: ExponentialInsulinModelPreset?, afrezzaPotencyFactor: Double) {
+        if let insulinModelPreset {
+            therapySettings.defaultRapidActingModel = insulinModelPreset
+        }
+        therapySettings.afrezzaPotencyFactor = afrezzaPotencyFactor
+        delegate?.saveCompletion(therapySettings: therapySettings)
+    }
     
     public func saveCarbRatioSchedule(carbRatioSchedule: CarbRatioSchedule) {
         therapySettings.carbRatioSchedule = carbRatioSchedule

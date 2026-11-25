@@ -18,11 +18,14 @@ public struct InsulinModelSelection: View {
 
     @State private var value: ExponentialInsulinModelPreset
     @State private var chartManager: ChartsManager
+    @State private var afrezzaPotencyFactor: Double?
 
     private let initialValue: ExponentialInsulinModelPreset
+    private let initialAfrezzaPotencyFactor: Double?
     private let insulinSensitivitySchedule: InsulinSensitivitySchedule
     private let mode: SettingsPresentationMode
-    private let save: (_ insulinModelPreset: ExponentialInsulinModelPreset) -> Void
+    private let showsModelSelection: Bool
+    private let save: (_ insulinModelPreset: ExponentialInsulinModelPreset, _ afrezzaPotencyFactor: Double?) -> Void
 
     static let defaultInsulinSensitivitySchedule = InsulinSensitivitySchedule(unit: .milligramsPerDeciliter, dailyItems: [RepeatingScheduleValue<Double>(startTime: 0, value: 40)])!
     
@@ -37,8 +40,25 @@ public struct InsulinModelSelection: View {
         onSave save: @escaping (_ insulinModelPreset: ExponentialInsulinModelPreset) -> Void,
         mode: SettingsPresentationMode
     ){
+        self.init(value: value, afrezzaPotencyFactor: nil, insulinSensitivitySchedule: insulinSensitivitySchedule, chartColors: chartColors,
+                  onSave: { preset, _ in save(preset) }, mode: mode)
+    }
+
+    /// With a non-nil `afrezzaPotencyFactor`, also edits the Afrezza potency factor and saves it with the model. (custom)
+    public init(
+        value: ExponentialInsulinModelPreset,
+        afrezzaPotencyFactor: Double?,
+        insulinSensitivitySchedule: InsulinSensitivitySchedule?,
+        chartColors: ChartColorPalette,
+        onSave save: @escaping (_ insulinModelPreset: ExponentialInsulinModelPreset, _ afrezzaPotencyFactor: Double?) -> Void,
+        mode: SettingsPresentationMode,
+        showsModelSelection: Bool = true
+    ){
+        self.showsModelSelection = showsModelSelection
         self._value = State(initialValue: value)
         self.initialValue = value
+        self._afrezzaPotencyFactor = State(initialValue: afrezzaPotencyFactor)
+        self.initialAfrezzaPotencyFactor = afrezzaPotencyFactor
         self.insulinSensitivitySchedule = insulinSensitivitySchedule ?? Self.defaultInsulinSensitivitySchedule
         self.save = save
         self.mode = mode
@@ -68,13 +88,21 @@ public struct InsulinModelSelection: View {
     ) {
         self.init(
             value: therapySettingsViewModel.therapySettings.defaultRapidActingModel ?? .rapidActingAdult,
+            afrezzaPotencyFactor: therapySettingsViewModel.therapySettings.afrezzaPotencyFactor ?? InsulinType.defaultAfrezzaPotencyFactor,
             insulinSensitivitySchedule: therapySettingsViewModel.therapySettings.insulinSensitivitySchedule,
             chartColors: chartColors,
-            onSave: { [weak therapySettingsViewModel] insulinModelPreset in
-                therapySettingsViewModel?.saveInsulinModel(insulinModelPreset: insulinModelPreset)
+            onSave: { [weak therapySettingsViewModel] insulinModelPreset, afrezzaPotencyFactor in
+                if let afrezzaPotencyFactor {
+                    // Without model selection only the factor is saved; the model stays as it was
+                    let selectable = therapySettingsViewModel?.adultChildInsulinModelSelectionEnabled == true
+                    therapySettingsViewModel?.saveInsulinModel(insulinModelPreset: selectable ? insulinModelPreset : nil, afrezzaPotencyFactor: afrezzaPotencyFactor)
+                } else {
+                    therapySettingsViewModel?.saveInsulinModel(insulinModelPreset: insulinModelPreset)
+                }
                 didSave?()
             },
-            mode: mode
+            mode: mode,
+            showsModelSelection: therapySettingsViewModel.adultChildInsulinModelSelectionEnabled
         )
     }
 
@@ -90,7 +118,7 @@ public struct InsulinModelSelection: View {
 
     private var contentWithCancel: some View {
         content
-            .navigationBarBackButtonHidden(value != initialValue)
+            .navigationBarBackButtonHidden(hasChanges)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     leadingNavigationBarItem
@@ -100,7 +128,7 @@ public struct InsulinModelSelection: View {
 
     @ViewBuilder
     private var leadingNavigationBarItem: some View {
-        if value != initialValue {
+        if hasChanges {
             cancelButton
         } else {
             EmptyView()
@@ -114,13 +142,13 @@ public struct InsulinModelSelection: View {
     private var content: some View {
         VStack(spacing: 0) {
             CardList(title: Text(LocalizedString("Insulin Model", comment: "Title text for insulin model")),
-                     style: .simple(CardStack(cards: [card])))
+                     style: .simple(CardStack(cards: showsModelSelection ? [card, afrezzaCard] : [afrezzaCard])))
             Button(action: { startSaving() }) {
                 Text(mode.buttonText())
                     .actionButtonStyle(.primary)
                     .padding()
             }
-            .disabled(value == initialValue && mode != .acceptanceFlow)
+            .disabled(!hasChanges && mode != .acceptanceFlow)
             // Styling to mimic the floating button of a ConfigurationPage
             .padding(.bottom)
             .background(Color(.secondarySystemGroupedBackground).shadow(radius: 5))
@@ -172,6 +200,59 @@ public struct InsulinModelSelection: View {
             .buttonStyle(PlainButtonStyle()) // Disable row highlighting on selection
         }
     }
+
+    private var hasChanges: Bool {
+        value != initialValue || afrezzaPotencyFactor != initialAfrezzaPotencyFactor
+    }
+
+    // MARK: - Afrezza potency (custom)
+
+    /// Shown only when editing the factor; the stepper keeps it on 0.05 steps within the allowed range.
+    private var afrezzaCard: Card? {
+        guard let factor = afrezzaPotencyFactor else { return nil }
+        let cartridge = 4.0
+        return Card {
+            Section {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(LocalizedString("Afrezza (inhaled insulin)", comment: "Title for the Afrezza potency setting"))
+                        .font(.headline)
+                    Text(LocalizedString("How much of each logged Afrezza unit counts as injected insulin, for active insulin and the forecast. History and Nightscout keep the units actually taken.", comment: "Description of the Afrezza potency setting"))
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                    Stepper(
+                        value: Binding(
+                            get: { factor },
+                            set: { afrezzaPotencyFactor = (min(max($0, InsulinType.afrezzaPotencyFactorRange.lowerBound), InsulinType.afrezzaPotencyFactorRange.upperBound) * 20).rounded() / 20 }
+                        ),
+                        in: InsulinType.afrezzaPotencyFactorRange,
+                        step: 0.05
+                    ) {
+                        Text(String(format: LocalizedString("%1$@U counts as %2$@U", comment: "Afrezza potency: units logged and units counted (1: cartridge units, 2: counted units)"),
+                                    Self.unitsFormatter.string(from: cartridge as NSNumber) ?? "", Self.unitsFormatter.string(from: cartridge * factor as NSNumber) ?? ""))
+                            .font(.body.bold())
+                    }
+                    Text(String(format: LocalizedString("Factor %@", comment: "Afrezza potency factor value (1: factor)"), Self.factorFormatter.string(from: factor as NSNumber) ?? ""))
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                }
+                .padding(4)
+            }
+        }
+    }
+
+    private static let unitsFormatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.minimumFractionDigits = 0
+        formatter.maximumFractionDigits = 2
+        return formatter
+    }()
+
+    private static let factorFormatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.minimumFractionDigits = 2
+        formatter.maximumFractionDigits = 2
+        return formatter
+    }()
 
     var insulinModelSettingDescription: Text {
         let spellOutFormatter = NumberFormatter()
@@ -240,7 +321,7 @@ public struct InsulinModelSelection: View {
     }
     
     private func continueSaving() {
-        save(value)
+        save(value, afrezzaPotencyFactor)
     }
 
     var dismissButton: some View {
