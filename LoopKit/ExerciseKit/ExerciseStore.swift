@@ -64,9 +64,14 @@ public final class ExerciseStore {
         }
     }
 
-    public static let readTypes: Set<HKObjectType> = Set([HKObjectType.workoutType()])
-        .union(StoredWorkout.distanceTypes)
-        .union(StoredHealthSample.Kind.allCases.map(\.quantityType))
+    public static let readTypes: Set<HKObjectType> = readTypes(for: StoredHealthSample.Kind.allCases)
+
+    /// Workouts plus the given health sample kinds (custom: lets an app read only what it uses)
+    public static func readTypes(for kinds: [StoredHealthSample.Kind]) -> Set<HKObjectType> {
+        Set([HKObjectType.workoutType()])
+            .union(StoredWorkout.distanceTypes)
+            .union(kinds.map(\.quantityType))
+    }
 
     public let healthStore: HKHealthStoreProtocol
 
@@ -78,10 +83,10 @@ public final class ExerciseStore {
         self.healthStore = healthStore
     }
 
-    public func observe(workoutsChanged: @escaping @Sendable () -> Void, samplesChanged: @escaping @Sendable () -> Void) {
+    public func observe(kinds: [StoredHealthSample.Kind] = StoredHealthSample.Kind.allCases, workoutsChanged: @escaping @Sendable () -> Void, samplesChanged: @escaping @Sendable () -> Void) {
         stopObserving()
         observerQueries = [observerQuery(for: .workoutType(), onChange: workoutsChanged)]
-            + StoredHealthSample.Kind.allCases.map { observerQuery(for: $0.quantityType, onChange: samplesChanged) }
+            + kinds.map { observerQuery(for: $0.quantityType, onChange: samplesChanged) }
         observerQueries.forEach(healthStore.execute)
     }
 
